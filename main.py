@@ -5,6 +5,14 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 
+"""
+this code was tested on:
+Debian 4.9 x86_64
+python: 3.5.3 (default, Sep 27 2018, 17:25:39) \n[GCC 6.3.0 20170516]
+numpy: 1.16.0
+matplotlib: 3.0.2
+"""
+
 def avg(z, dy):
 	return (
 		sum([
@@ -28,6 +36,10 @@ class DataReader(object):
 		self.file_handle.close()
 
 	def read(self):
+		"""
+		Read the content of the file, parse it as a csv (with a delimiter set to be space)
+		Then, parse the data, and initialize inner parameters
+		"""
 		self._raw_data = list(csv.reader(self.file_handle, delimiter=' '))
 
 		# get all rows containing data (or the headers) until the seperator row in reached
@@ -45,6 +57,10 @@ class DataReader(object):
 		self._validate_data_value()
 
 	def _discover_mode(self):
+		"""
+		identify if the data is in rows or columns.
+		note: the object in the first row and first column is expected to be 'x'
+		"""
 		if self._data[0][0].lower() != 'x':
 			print("[!] invalid data - no 'x' column found")
 			sys.exit(1) # 1 is error code
@@ -54,10 +70,14 @@ class DataReader(object):
 		elif self._data[1][0].lower() == 'dx':
 			self.mode = 'columns'
 		else:
-			print("[!] invalid data - no 'x' column found")
+			print("[!] invalid data - no 'dx' column found")
 			sys.exit(1) # 1 is error code
 
 	def _validate_data_length(self):
+		"""
+		validate that every row and column have the same length
+		plus, verify that there are no empty items
+		"""
 		if self.mode == 'rows':
 			for row in self._data:
 				# the empty row - a row seperator
@@ -78,6 +98,9 @@ class DataReader(object):
 					sys.exit(1) # 1 is error code
 
 	def _convert_to_rows(self):
+		"""
+		if the mode is columns, convert it to rows, for convinience
+		"""
 		if self.mode == 'rows':
 			return
 		new_data = []
@@ -122,66 +145,90 @@ class DataReader(object):
 			sys.exit(1) # 1 is error code
 		return True
 
+
 	def fit(self):
+		a, da, b, db = self.fit_linear()
+
+		chi, chi_reduced = self.calculate_chi_square(a, b)
+
+		self.fit_parameters = {
+			'a': a,
+			'da': da,
+			'b': b,
+			'db': db,
+			'chi': chi,
+			'chi_reduced': chi_reduced,
+		}
+		return self.fit_parameters
+
+	# this function returns (a, da, b, db)
+	def fit_linear(self):
 		_avg = lambda z: avg(z, self.data_dict['dy'])
+
+		# for convenience and readability
+		d = self.data_dict
 
 		a = (
 			(
-				_avg(self.data_dict['x'] * self.data_dict['y'])
+				_avg(d['x'] * d['y'])
 				 -
 				(
-					_avg(self.data_dict['x'])
+					_avg(d['x'])
 					*
-					_avg(self.data_dict['y'])
+					_avg(d['y'])
 				)
 			) / (
-				_avg(self.data_dict['x'] ** 2)
+				_avg(d['x'] ** 2)
 				 -
-				_avg(self.data_dict['x'])  ** 2
+				_avg(d['x'])  ** 2
 			)
 		)
 		da = (
-			_avg(self.data_dict['dy'] ** 2)
+			_avg(d['dy'] ** 2)
 			 /
 			self.n * (
-				_avg(self.data_dict['x'] ** 2)
+				_avg(d['x'] ** 2)
 				 -
-				_avg(self.data_dict['x'])  ** 2
+				_avg(d['x'])  ** 2
 			)
 		)
 		b = (
-			_avg(self.data_dict['y'])
+			_avg(d['y'])
 			 -
-			a * _avg(self.data_dict['x'])
+			a * _avg(d['x'])
 		)
 		db = (
 			(
-				_avg(self.data_dict['dy'] ** 2)
+				_avg(d['dy'] ** 2)
 				 *
-				_avg(self.data_dict['x'] ** 2)
+				_avg(d['x'] ** 2)
 			)
 			 /
 			(
 				self.n
 				 *
 				(
-					_avg(self.data_dict['x'] ** 2)
+					_avg(d['x'] ** 2)
 					 -
-					_avg(self.data_dict['x'])  ** 2
+					_avg(d['x'])  ** 2
 				)
 			)
 		)
 		return a, da, b, db
 
+	# this function returns (chi, chi_reduced)
 	def calculate_chi_square(self, a, b):
+		# for convenience and readability
+		d = self.data_dict
+
 		chi = sum([
 			(
 				(
-					self.data_dict['y'][i]
+					d['y'][i]
 					 -
-					(a * self.data_dict['x'][i] + b)
+					(a * d['x'][i] + b)
 				) / (
-					self.data_dict['dy'][i]
+					d['dy'][i]
 				)
 			) ** 2
 			for i in range(self.n)
@@ -192,19 +239,77 @@ class DataReader(object):
 
 	def extract_plot_labels(self):
 		"""
-		the last 2 rows has the format of:
+		the data format goes like:
+			data
+			data
+			data
+			<empty row - a row seperator>
 			<axis name - 1 letter> axis: <axis title>
+			<axis name - 1 letter> axis: <axis title>
+
 		thus, self._raw_data[row_index][0] will be the axis,
 			  self._raw_data[row_index][1] will be "axis:"
 			  and the rest will be the requested title
 		"""
 		axis_label_index = self._raw_data.index([]) # an empty list - a row seperator
+
 		labels = {}
-		labels[self._raw_data[axis_label_index+1][0].lower()] = \
-			' '.join(self._raw_data[axis_label_index+1][2:])
-		labels[self._raw_data[axis_label_index+2][0].lower()] = \
-			' '.join(self._raw_data[axis_label_index+2][2:])
+
+		axis_name  = lambda index: self._raw_data[index][0].lower()
+		axis_title = lambda index: ' '.join(self._raw_data[index][2:])
+
+		labels[axis_name(axis_label_index+1)] = axis_title(axis_label_index+1)
+		labels[axis_name(axis_label_index+2)] = axis_title(axis_label_index+2)
+
 		return labels
+
+
+	def plot_fit(self):
+		self.fit()
+
+		self._print_fit_results(self.fit_parameters)
+		self._plot_errorbar()
+		self._plot_lin_fit(self.fit_parameters)
+		self._plot_set_labels()
+
+		plt.show()
+
+		self._save_plot("linear_fit.svg")
+
+	def _print_fit_results(self, fit_parameters):
+		# print results
+		print("a = %s +- %s" % (fit_parameters['a'], fit_parameters['da']))
+		print("b = %s +- %s" % (fit_parameters['b'], fit_parameters['db']))
+		print("chi2 = %s"  % (fit_parameters['chi']))
+		print("chi2_reduced = %s" % (fit_parameters['chi_reduced']))
+
+	def _plot_errorbar(self):
+		plt.errorbar(
+			self.data_dict['x'],
+			self.data_dict['y'],
+			yerr=self.data_dict['dy'],
+			xerr=self.data_dict['dx'],
+			fmt='b+'
+		)
+
+	def _plot_lin_fit(self, fit_parameters):
+		fy = [
+			fit_parameters['a'] * i + fit_parameters['b']
+			for i in self.data_dict['x']
+		]
+		red_line = 'r'
+		plt.plot(self.data_dict['x'], fy, red_line) 
+
+	def _plot_set_labels(self):
+		labels = self.extract_plot_labels()
+		plt.xlabel(labels['x'])
+		plt.ylabel(labels['y'])
+
+	def _save_plot(self, filename):
+		plt.savefig(os.path.join(
+			os.path.dirname(self.filename),
+			filename
+		))
 
 def fit_linear(filename):
 	if not os.path.exists(filename):
@@ -214,41 +319,7 @@ def fit_linear(filename):
 	# read the data
 	data_reader = DataReader(filename)
 	data_reader.read()
-	x  = data_reader.data_dict['x']
-	dx = data_reader.data_dict['dx']
-	y  = data_reader.data_dict['y']
-	dy = data_reader.data_dict['dy']
-
-	# fit
-	a, da, b, db = data_reader.fit()
-
-	chi, chi_reduced = data_reader.calculate_chi_square(a, b)
-
-	# print results
-	print("a = %s +- %s" % (a, da))
-	print("b = %s +- %s" % (b, db))
-	print("chi2 = %s" % chi)
-	print("chi2_reduced = %s" % chi_reduced)
-	
-	# plot error-crosses
-	plt.errorbar(x, y, yerr=dy, xerr=dx, fmt='b+')
-
-	# plot fit
-	fy = [a*i+b for i in x]
-	plt.plot(x, fy, 'r')
-
-	# set axis labels
-	labels = data_reader.extract_plot_labels()
-	plt.xlabel(labels['x'])
-	plt.ylabel(labels['y'])
-
-	plt.show()
-
-	export_filename = os.path.join(
-		os.path.dirname(filename),
-		"linear_fit.svg"
-	)
-	plt.savefig(export_filename)
+	data_reader.plot_fit()
 
 class Bonus(DataReader):
 	def _extract_fit_parameters(self):
@@ -307,13 +378,45 @@ class Bonus(DataReader):
 				b += self.parameters['b']["step"]
 			a += self.parameters['a']["step"]
 
-		return {
+		self.fit_parameters = {
 			'a': best_a,
+			'da': self.parameters['a']["step"],
 			'b': best_b,
+			'db': self.parameters['b']["step"],
 			'chi': best_chi,
 			'chi_reduced': best_chi_reduced,
 			'plot_data': data_for_graph,
 		}
+		return self.fit_parameters
+
+	# override
+	def extract_plot_labels(self):
+		return {
+			'x': 'a',
+			'y': 'chi2(a, b = %.2f)' % self.fit_parameters['b'],
+		}
+	# override
+	def plot_fit(self):
+		super().plot_fit()
+
+		self._plot_chi_of_a()
+
+		self._plot_set_labels()
+		plt.show()
+
+		self._save_plot("numeric_sampling.svg")
+
+	def _plot_chi_of_a(self):
+		# filter only the a's assosiated with the best b
+		plot_data = list(filter(
+			lambda value: value[1] == self.fit_parameters["b"],
+			self.fit_parameters["plot_data"]
+		))
+		plot_data_a   = [row[0] for row in plot_data]
+		plot_data_chi = [row[2] for row in plot_data]
+
+		# blue line is the default
+		plt.plot(plot_data_a, plot_data_chi)
 
 def search_best_parameter(filename):
 	if not os.path.exists(filename):
@@ -323,71 +426,11 @@ def search_best_parameter(filename):
 	# read the data
 	data_reader = Bonus(filename)
 	data_reader.read()
-	x  = data_reader.data_dict['x']
-	dx = data_reader.data_dict['dx']
-	y  = data_reader.data_dict['y']
-	dy = data_reader.data_dict['dy']
+	data_reader.plot_fit()
 
-	# fit
-	fit_parameters = data_reader.fit()
-	# for convenince
-	a = fit_parameters['a']
-	b = fit_parameters['b']
 
-	# print results
-	print("a = %s +- %s" % (a, data_reader.parameters['a']["step"]))
-	print("b = %s +- %s" % (b, data_reader.parameters['b']["step"]))
-	print("chi2 = %s" % fit_parameters['chi'])
-	print("chi2_reduced = %s" % fit_parameters['chi_reduced'])
-	
-	# plot error-crosses
-	plt.errorbar(x, y, yerr=dy, xerr=dx, fmt='b+')
-
-	# plot fit
-	fy = [a*i+b for i in x]
-	plt.plot(x, fy, 'r')
-
-	# set axis labels
-	labels = data_reader.extract_plot_labels()
-	plt.xlabel(labels['x'])
-	plt.ylabel(labels['y'])
-
-	plt.show()
-
-	export_filename = os.path.join(
-		os.path.dirname(filename),
-		"linear_fit.svg"
-	)
-	plt.savefig(export_filename)
-
-	#####################
-	### plot chi of a ###
-	#####################
-
-	# filter only the a's assosiated with the best b
-	plot_data = list(filter(
-		lambda value: value[1] == b,
-		fit_parameters["plot_data"]
-	))
-	plot_data_a   = [row[0] for row in plot_data]
-	plot_data_chi = [row[2] for row in plot_data]
-
-	# blue line is the default
-	plt.plot(plot_data_a, plot_data_chi)
-
-	plt.xlabel('a')
-	plt.ylabel('chi2(a, b = %.2f)' % b)
-
-	plt.show()
-
-	export_filename = os.path.join(
-		os.path.dirname(filename),
-		"numeric_sampling.svg"
-	)
-	plt.savefig(export_filename)
-
-filename = '/home/me/Dropbox/Courses/University/year_1/semester_1/Computers/Project/inputOutputExamples/workingCols/input.txt'
-filename = '/home/me/Dropbox/Courses/University/year_1/semester_1/Computers/Project/inputOutputExamples/errSigma/input.txt'
-filename = '/home/me/Dropbox/Courses/University/year_1/semester_1/Computers/Project/inputOutputExamples/errDataLength/input.txt'
-filename = '/home/me/Dropbox/Courses/University/year_1/semester_1/Computers/Project/inputOutputExamples/workingRows/input.txt'
+filename_cols = '/home/me/Dropbox/Courses/University/year_1/semester_1/Computers/Project/inputOutputExamples/workingCols/input.txt'
+filename_err_sigma = '/home/me/Dropbox/Courses/University/year_1/semester_1/Computers/Project/inputOutputExamples/errSigma/input.txt'
+filename_err_length = '/home/me/Dropbox/Courses/University/year_1/semester_1/Computers/Project/inputOutputExamples/errDataLength/input.txt'
+filename_rows = '/home/me/Dropbox/Courses/University/year_1/semester_1/Computers/Project/inputOutputExamples/workingRows/input.txt'
 bonus = '/home/me/Dropbox/Courses/University/year_1/semester_1/Computers/Project/inputOutputExamples/bonus/input.txt'
