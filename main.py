@@ -189,12 +189,14 @@ class DataReader(object):
 		da = (
 			_avg(dy ** 2)
 			 /
-			self.n * (
-				_avg(x ** 2)
-				 -
-				_avg(x)  ** 2
+			(
+				self.n * (
+					_avg(x ** 2)
+					 -
+					_avg(x)  ** 2
+				)
 			)
-		)
+		) ** 0.5
 		b = (
 			_avg(y)
 			 -
@@ -216,7 +218,7 @@ class DataReader(object):
 					_avg(x)  ** 2
 				)
 			)
-		)
+		) ** 0.5
 		return a, da, b, db
 
 	# this function returns (chi, chi_reduced)
