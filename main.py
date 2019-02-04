@@ -163,54 +163,57 @@ class DataReader(object):
 
 	# this function returns (a, da, b, db)
 	def fit_linear(self):
-		_avg = lambda z: avg(z, self.data_dict['dy'])
-
 		# for convenience and readability
-		d = self.data_dict
+		x  = self.data_dict['x']
+		dx = self.data_dict['dx']
+		y  = self.data_dict['y']
+		dy = self.data_dict['dy']
+
+		_avg = lambda z: avg(z, dy)
 
 		a = (
 			(
-				_avg(d['x'] * d['y'])
+				_avg(x * y)
 				 -
 				(
-					_avg(d['x'])
+					_avg(x)
 					*
-					_avg(d['y'])
+					_avg(y)
 				)
 			) / (
-				_avg(d['x'] ** 2)
+				_avg(x ** 2)
 				 -
-				_avg(d['x'])  ** 2
+				_avg(x)  ** 2
 			)
 		)
 		da = (
-			_avg(d['dy'] ** 2)
+			_avg(dy ** 2)
 			 /
 			self.n * (
-				_avg(d['x'] ** 2)
+				_avg(x ** 2)
 				 -
-				_avg(d['x'])  ** 2
+				_avg(x)  ** 2
 			)
 		)
 		b = (
-			_avg(d['y'])
+			_avg(y)
 			 -
-			a * _avg(d['x'])
+			a * _avg(x)
 		)
 		db = (
 			(
-				_avg(d['dy'] ** 2)
+				_avg(dy ** 2)
 				 *
-				_avg(d['x'] ** 2)
+				_avg(x ** 2)
 			)
 			 /
 			(
 				self.n
 				 *
 				(
-					_avg(d['x'] ** 2)
+					_avg(x ** 2)
 					 -
-					_avg(d['x'])  ** 2
+					_avg(x)  ** 2
 				)
 			)
 		)
@@ -404,7 +407,7 @@ class Bonus(DataReader):
 		self._plot_set_labels()
 
 		self._save_plot("numeric_sampling.svg")
-		
+
 		plt.show()
 
 	def _plot_chi_of_a(self):
