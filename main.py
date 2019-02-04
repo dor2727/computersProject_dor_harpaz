@@ -427,10 +427,3 @@ def search_best_parameter(filename):
 	data_reader = Bonus(filename)
 	data_reader.read()
 	data_reader.plot_fit()
-
-
-filename_cols = '/home/me/Dropbox/Courses/University/year_1/semester_1/Computers/Project/inputOutputExamples/workingCols/input.txt'
-filename_err_sigma = '/home/me/Dropbox/Courses/University/year_1/semester_1/Computers/Project/inputOutputExamples/errSigma/input.txt'
-filename_err_length = '/home/me/Dropbox/Courses/University/year_1/semester_1/Computers/Project/inputOutputExamples/errDataLength/input.txt'
-filename_rows = '/home/me/Dropbox/Courses/University/year_1/semester_1/Computers/Project/inputOutputExamples/workingRows/input.txt'
-bonus = '/home/me/Dropbox/Courses/University/year_1/semester_1/Computers/Project/inputOutputExamples/bonus/input.txt'
