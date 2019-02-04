@@ -272,9 +272,9 @@ class DataReader(object):
 		self._plot_lin_fit(self.fit_parameters)
 		self._plot_set_labels()
 
-		plt.show()
-
 		self._save_plot("linear_fit.svg")
+
+		plt.show()
 
 	def _print_fit_results(self, fit_parameters):
 		# print results
@@ -309,7 +309,7 @@ class DataReader(object):
 		plt.savefig(os.path.join(
 			os.path.dirname(self.filename),
 			filename
-		))
+		), format="svg")
 
 def fit_linear(filename):
 	if not os.path.exists(filename):
@@ -402,9 +402,10 @@ class Bonus(DataReader):
 		self._plot_chi_of_a()
 
 		self._plot_set_labels()
-		plt.show()
 
 		self._save_plot("numeric_sampling.svg")
+		
+		plt.show()
 
 	def _plot_chi_of_a(self):
 		# filter only the a's assosiated with the best b
@@ -427,3 +428,9 @@ def search_best_parameter(filename):
 	data_reader = Bonus(filename)
 	data_reader.read()
 	data_reader.plot_fit()
+
+filename_cols = '/home/me/Dropbox/Courses/University/year_1/semester_1/Computers/Project/inputOutputExamples/workingCols/input.txt'
+filename_err_sigma = '/home/me/Dropbox/Courses/University/year_1/semester_1/Computers/Project/inputOutputExamples/errSigma/input.txt'
+filename_err_length = '/home/me/Dropbox/Courses/University/year_1/semester_1/Computers/Project/inputOutputExamples/errDataLength/input.txt'
+filename_rows = '/home/me/Dropbox/Courses/University/year_1/semester_1/Computers/Project/inputOutputExamples/workingRows/input.txt'
+bonus = '/home/me/Dropbox/Courses/University/year_1/semester_1/Computers/Project/inputOutputExamples/bonus/input.txt'
