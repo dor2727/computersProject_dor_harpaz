@@ -224,16 +224,19 @@ class DataReader(object):
 	# this function returns (chi, chi_reduced)
 	def calculate_chi_square(self, a, b):
 		# for convenience and readability
-		d = self.data_dict
+		x  = self.data_dict['x']
+		dx = self.data_dict['dx']
+		y  = self.data_dict['y']
+		dy = self.data_dict['dy']
 
 		chi = sum([
 			(
 				(
-					d['y'][i]
+					y[i]
 					 -
-					(a * d['x'][i] + b)
+					(a * x[i] + b)
 				) / (
-					d['dy'][i]
+					dy[i]
 				)
 			) ** 2
 			for i in range(self.n)
@@ -393,6 +396,41 @@ class Bonus(DataReader):
 			'plot_data': data_for_graph,
 		}
 		return self.fit_parameters
+
+	# override
+	def calculate_chi_square(self, a, b):
+		# for convenience and readability
+		x  = self.data_dict['x']
+		dx = self.data_dict['dx']
+		y  = self.data_dict['y']
+		dy = self.data_dict['dy']
+
+		# capital X to avoid double use of the x variable
+		f = lambda X: a * X + b
+
+		chi = sum([
+			(
+				(
+					y[i]
+					 -
+					f(x[i])
+				) / (
+					(
+						(dy[i] ** 2)
+						 +
+						(
+							f(x[i] + dx[i])
+							 -
+							f(x[i] - dx[i])
+						) ** 2
+					) ** 0.5
+				)
+			) ** 2
+			for i in range(self.n)
+		])
+		chi_reduced = chi / (self.n - 2)
+
+		return chi, chi_reduced
 
 	# override
 	def extract_plot_labels(self):
